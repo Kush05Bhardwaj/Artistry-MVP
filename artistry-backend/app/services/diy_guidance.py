@@ -1,12 +1,19 @@
-def diy_steps(objects):
-    steps = []
-    labels = [o["label"] for o in objects]
+from app.models.llm import ask_llm
 
-    if "wall" in labels:
-        steps.append("Apply peel-and-stick wallpaper")
-    if "lamp" in labels:
-        steps.append("Replace bulbs with warm LEDs")
-    if "sofa" in labels:
-        steps.append("Add throws and cushion covers")
+SYSTEM_PROMPT = """
+You provide DIY interior improvement steps.
+Steps should be safe, beginner-friendly, and affordable.
+"""
 
-    return steps or ["Rearrange furniture for better space usage"]
+def generate_diy(room_analysis):
+    user_prompt = f"""
+Room description:
+{room_analysis['scene_description']}
+
+Detected objects:
+{room_analysis['objects']}
+
+Provide step-by-step DIY improvement guidance.
+"""
+
+    return ask_llm(SYSTEM_PROMPT, user_prompt)

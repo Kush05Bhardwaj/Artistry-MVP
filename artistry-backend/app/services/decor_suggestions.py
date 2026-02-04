@@ -1,13 +1,20 @@
-def suggest_decor(objects):
-    ideas = []
+from app.models.llm import ask_llm
 
-    labels = [o["label"] for o in objects]
+SYSTEM_PROMPT = """
+You are an interior designer AI.
+You analyze rooms and propose decor changes based on space, lighting, and style.
+Avoid generic advice. Be specific and practical.
+"""
 
-    if "sofa" in labels:
-        ideas.append("Add textured cushions and a neutral rug")
-    if "bed" in labels:
-        ideas.append("Use layered bedding and warm bedside lighting")
-    if "window" in labels:
-        ideas.append("Install sheer curtains for soft daylight")
+def generate_decor(room_analysis):
+    user_prompt = f"""
+Room description:
+{room_analysis['scene_description']}
 
-    return ideas or ["Minimal modern decor with neutral tones"]
+Detected objects:
+{room_analysis['objects']}
+
+Suggest decor improvements and design ideas.
+"""
+
+    return ask_llm(SYSTEM_PROMPT, user_prompt)

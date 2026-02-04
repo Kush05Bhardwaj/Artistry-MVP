@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-from app.services.diy_guidance import diy_steps
+from app.services.diy_guidance import generate_diy
 
 router = APIRouter(prefix="/diy")
 
 @router.post("/")
-def diy(objects: list):
-    return {"steps": diy_steps(objects)}
+def diy(room_analysis: dict):
+    return {"diy_steps": generate_diy(room_analysis)}

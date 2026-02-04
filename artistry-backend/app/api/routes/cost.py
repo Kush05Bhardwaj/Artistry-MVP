@@ -4,5 +4,5 @@ from app.services.cost_estimation import estimate_cost
 router = APIRouter(prefix="/cost")
 
 @router.post("/")
-def cost(objects: list):
-    return estimate_cost(objects)
+def cost(room_analysis: dict):
+    return {"cost_estimate": estimate_cost(room_analysis)}

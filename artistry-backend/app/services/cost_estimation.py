@@ -1,14 +1,20 @@
-COST_MAP = {
-    "sofa": 12000,
-    "bed": 15000,
-    "table": 6000,
-    "chair": 3000,
-    "lamp": 2500,
-}
+from app.models.llm import ask_llm
 
-def estimate_cost(objects):
-    cost = 0
-    for obj in objects:
-        cost += COST_MAP.get(obj["label"], 4000)
+SYSTEM_PROMPT = """
+You estimate interior redesign costs in INR.
+Base your estimate on room size, furniture, and decor complexity.
+Give a realistic approximate range.
+"""
 
-    return {"estimated_cost_inr": cost}
+def estimate_cost(room_analysis):
+    user_prompt = f"""
+Room description:
+{room_analysis['scene_description']}
+
+Detected objects:
+{room_analysis['objects']}
+
+Estimate approximate redesign cost in INR.
+"""
+
+    return ask_llm(SYSTEM_PROMPT, user_prompt)
