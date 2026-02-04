@@ -138,7 +138,6 @@ Thumbs.db
 *.pkl
 *.h5
 *.ckpt
-models/
 checkpoints/
 
 # Docker
