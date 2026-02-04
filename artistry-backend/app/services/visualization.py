@@ -1,14 +1,13 @@
 from PIL import Image, ImageEnhance
 
 def generate_before_after(image_path):
-    img = Image.open(image_path)
-    enhancer = ImageEnhance.Color(img)
-    after = enhancer.enhance(1.4)
+    img = Image.open(image_path).convert("RGB")
 
-    after_path = image_path.replace(".", "_after.")
-    after.save(after_path)
+    img = ImageEnhance.Brightness(img).enhance(1.1)
+    img = ImageEnhance.Contrast(img).enhance(1.2)
+    img = ImageEnhance.Sharpness(img).enhance(1.3)
 
-    return {
-        "before": image_path,
-        "after": after_path
-    }
+    after_path = image_path.replace(".jpg", "_after.jpg")
+    img.save(after_path)
+
+    return {"before": image_path, "after": after_path}

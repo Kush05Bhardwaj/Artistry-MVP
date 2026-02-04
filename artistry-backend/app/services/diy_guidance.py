@@ -1,8 +1,12 @@
 def diy_steps(objects):
     steps = []
-    if "bed" in objects:
-        steps.append("Change bedsheets and add a headboard panel")
-    if "wall" in objects:
-        steps.append("Apply peel-and-stick wallpaper")
+    labels = [o["label"] for o in objects]
 
-    return steps
+    if "wall" in labels:
+        steps.append("Apply peel-and-stick wallpaper")
+    if "lamp" in labels:
+        steps.append("Replace bulbs with warm LEDs")
+    if "sofa" in labels:
+        steps.append("Add throws and cushion covers")
+
+    return steps or ["Rearrange furniture for better space usage"]

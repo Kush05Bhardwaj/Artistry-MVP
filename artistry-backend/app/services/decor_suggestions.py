@@ -1,10 +1,13 @@
-def suggest_decor(room_analysis):
-    objects = room_analysis["detected_objects"]
+def suggest_decor(objects):
+    ideas = []
 
-    suggestions = []
-    if "sofa" in objects:
-        suggestions.append("Add accent cushions and a rug")
-    if "window" in objects:
-        suggestions.append("Use sheer curtains for natural light")
+    labels = [o["label"] for o in objects]
 
-    return suggestions
+    if "sofa" in labels:
+        ideas.append("Add textured cushions and a neutral rug")
+    if "bed" in labels:
+        ideas.append("Use layered bedding and warm bedside lighting")
+    if "window" in labels:
+        ideas.append("Install sheer curtains for soft daylight")
+
+    return ideas or ["Minimal modern decor with neutral tones"]
