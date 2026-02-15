@@ -1,3 +1,7 @@
+# detect.py
+from ultralytics import YOLO
+import cv2
+
 INTERIOR_CLASSES = {
     "Bed": 34,
     "Infant bed": 275,
@@ -39,38 +43,43 @@ INTERIOR_CLASSES = {
     "Flowerpot": 196,
     "Waste container": 576,
     "Bench": 41,
-    "Houseplant": 258,
-    "Shelf": 453,
-    "Drawer": 168,
-    "Waste container": 576
 }
 
-from ultralytics import YOLO
-import cv2
-
 model = YOLO("yolov8m-oiv7.pt")
+furniture_ids = list(set(INTERIOR_CLASSES.values()))
 
-img = cv2.imread("room.jpg")
-h, w, _ = img.shape
+def run_detection(image_path="room.jpg"):
+    img = cv2.imread(image_path)
+    h, w, _ = img.shape
 
-tile_size = 768
-overlap = 200
+    # Tile logic (optional; can skip if running final pass immediately)
+    tile_size = 768
+    overlap = 200
+    for y in range(0, h, tile_size - overlap):
+        for x in range(0, w, tile_size - overlap):
+            tile = img[y:y + tile_size, x:x + tile_size]
+            model.predict(tile, conf=0.25)
 
-for y in range(0, h, tile_size - overlap):
-    for x in range(0, w, tile_size - overlap):
-        tile = img[y:y+tile_size, x:x+tile_size]
-        results = model.predict(tile, conf=0.25)
+    # Final prediction
+    results = model.predict(
+        source=image_path,
+        imgsz=1536,
+        conf=0.25,
+        classes=furniture_ids,
+        agnostic_nms=True,
+        augment=True,
+    )
 
+    # Build structured output
+    detected_objects = []
+    for r in results:
+        for box in r.boxes:
+            cls_id = int(box.cls)
+            label = model.names[cls_id]
+            conf = float(box.conf)
+            detected_objects.append({
+                "type": label.lower(),
+                "confidence": round(conf, 2)
+            })
 
-furniture_ids = list(INTERIOR_CLASSES.values())
-
-results = model.predict(
-    source="room.jpg",
-    imgsz=1536,
-    conf=0.25,
-    classes=furniture_ids,
-    agnostic_nms=True,
-    augment=True,
-    save=True
-)
-
+    return detected_objects
