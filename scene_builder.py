@@ -1,25 +1,35 @@
 # scene_builder.py
 
-def build_scene(detected_objects, seg_map, segmenter, image):
+from collections import Counter
+import cv2
+import numpy as np
 
-    total_pixels = image.width * image.height
 
-    wall_mask = segmenter.get_mask(seg_map, "wall")
-    floor_mask = segmenter.get_mask(seg_map, "floor")
-    bed_mask = segmenter.get_mask(seg_map, "bed")
-    curtain_mask = segmenter.get_mask(seg_map, "curtain")
+def calculate_brightness(image_path):
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return round(float(np.mean(gray)), 2)
 
-    regions = {
-        "wall_percent": round(100 * wall_mask.sum() / total_pixels, 2),
-        "floor_percent": round(100 * floor_mask.sum() / total_pixels, 2),
-        "bed_percent": round(100 * bed_mask.sum() / total_pixels, 2),
-        "curtain_percent": round(100 * curtain_mask.sum() / total_pixels, 2),
-    }
+
+def build_scene_data(image_path, detected_objects, region_stats):
+
+    # Count objects
+    object_counts = Counter()
+    for obj in detected_objects:
+        object_counts[obj["type"]] += 1
+
+    clutter_score = round(
+        sum(object_counts.values()) / (region_stats["floor_percent"] + 1), 2
+    )
+
+    brightness_score = calculate_brightness(image_path)
 
     scene_data = {
         "room_type": "bedroom",
-        "objects": detected_objects,
-        "regions": regions
+        "object_counts": dict(object_counts),
+        "regions": region_stats,
+        "brightness_score": brightness_score,
+        "clutter_score": clutter_score,
     }
 
     return scene_data

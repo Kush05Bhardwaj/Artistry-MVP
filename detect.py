@@ -82,7 +82,8 @@ def run_detection(image_path="room.jpg"):
                 "confidence": round(conf, 2)
             })
 
-    return detected_objects
+    annotated_img = results[0].plot()
+    return detected_objects, annotated_img
 
 if __name__ == "__main__":
     detected_objects = run_detection("room.jpg")

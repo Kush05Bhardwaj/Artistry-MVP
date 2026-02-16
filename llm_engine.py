@@ -1,54 +1,58 @@
 # llm_engine.py
 
+import json
 from llama_cpp import Llama
 
-MODEL_PATH = r"F:\llama\models\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
 
-# Load once (global model instance)
-llm = Llama(
-    model_path=MODEL_PATH,
-    n_ctx=4096,
-    n_threads=8,         # adjust to CPU cores
-    n_gpu_layers=35      # set >0 if GPU available
-)
+class LLMEngine:
+    def __init__(self, model_path):
+        print("Loading LLM...")
+        self.llm = Llama(
+            model_path=model_path,
+            n_ctx=2048,
+            n_threads=8,
+            verbose=False
+        )
 
-def build_prompt(scene_data, user_input):
-    return f"""
+    def generate_design(self, scene_data, user_input):
+
+        prompt = f"""
 You are a professional interior designer AI.
 
-Room Type: {scene_data['room_type']}
+Scene Data:
+{json.dumps(scene_data, indent=2)}
 
-Detected Objects:
-{scene_data['objects']}
+User Requirements:
+{json.dumps(user_input, indent=2)}
 
-Region Coverage:
-Wall: {scene_data['regions']['wall_percent']}%
-Floor: {scene_data['regions']['floor_percent']}%
-Bed: {scene_data['regions']['bed_percent']}%
-Curtain: {scene_data['regions']['curtain_percent']}%
+Return ONLY valid JSON in this format:
 
-User Style Preference: {user_input['style']}
-Budget: ₹{user_input['budget']}
-Priority: {user_input['priority']}
-Constraints: {user_input['constraints']}
-
-Give structured suggestions in bullet points:
-- What to change
-- What to keep
-- Budget-aware improvements
-- Estimated rough cost reasoning
+{{
+  "changes": [
+    {{
+      "item": "",
+      "reason": "",
+      "estimated_cost": 0
+    }}
+  ]
+}}
 """
 
-def get_design_suggestions(scene_data, user_input):
+        output = self.llm(
+            prompt,
+            max_tokens=600,
+            temperature=0.7,
+            stop=["</s>"]
+        )
 
-    prompt = build_prompt(scene_data, user_input)
+        text = output["choices"][0]["text"]
 
-    output = llm(
-        prompt,
-        max_tokens=800,
-        temperature=0.7,
-        top_p=0.9,
-        stop=["</s>"]
-    )
-
-    return output["choices"][0]["text"].strip()
+        # Extract JSON safely
+        try:
+            json_start = text.find("{")
+            json_end = text.rfind("}") + 1
+            structured = json.loads(text[json_start:json_end])
+            return structured
+        except:
+            print("⚠ LLM JSON parse failed.")
+            return {"changes": []}

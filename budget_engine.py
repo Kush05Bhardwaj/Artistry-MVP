@@ -1,18 +1,16 @@
 # budget_engine.py
 
-PRICE_CATALOG = {
-    "curtain replacement": 3500,
-    "wall repaint per sqft": 25,
-    "add rug": 8000,
-    "new lamp": 2500,
-    "plant decor": 2000
-}
-
-def estimate_cost(suggestions_text):
+def calculate_total_cost(structured_plan):
     total = 0
 
-    for item, price in PRICE_CATALOG.items():
-        if item in suggestions_text.lower():
-            total += price
+    for change in structured_plan.get("changes", []):
+        total += change.get("estimated_cost", 0)
 
     return total
+
+
+def evaluate_budget(total_cost, user_budget):
+    if total_cost <= user_budget:
+        return "✅ Within budget."
+    else:
+        return "❌ Over budget."
