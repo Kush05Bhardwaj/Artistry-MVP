@@ -83,3 +83,8 @@ def run_detection(image_path="room.jpg"):
             })
 
     return detected_objects
+
+if __name__ == "__main__":
+    detected_objects = run_detection("room.jpg")
+    print("Detected Objects:")
+    print(detected_objects)
