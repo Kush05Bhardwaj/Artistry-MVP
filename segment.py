@@ -44,7 +44,17 @@ class Segmenter:
 
         return seg_resized
 
+    def create_overlay(self, image_path, seg_map):
+        original = cv2.imread(image_path)
+        num_classes = len(self.labels)
+        colors = np.random.randint(0, 255, size=(num_classes, 3))
+        colored_mask = colors[seg_map].astype(np.uint8)
+
+        overlay = cv2.addWeighted(original, 0.6, colored_mask, 0.4, 0)
+        return overlay
+
     def extract_region_stats(self, seg_map):
+
         total_pixels = seg_map.size
 
         def get_percent(label_name):
@@ -61,8 +71,4 @@ class Segmenter:
             "floor_percent": get_percent("floor"),
             "bed_percent": get_percent("bed"),
             "curtain_percent": get_percent("curtain"),
-            "segmented_image": seg_resized,
-            "overlay": overlay
         }
-    
-        

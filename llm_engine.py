@@ -15,44 +15,43 @@ class LLMEngine:
         )
 
     def generate_design(self, scene_data, user_input):
-
-        prompt = f"""
-You are a professional interior designer AI.
+        prompt = f"""You are an interior design AI assistant. Based on the scene data and user input, generate design suggestions.
 
 Scene Data:
 {json.dumps(scene_data, indent=2)}
 
-User Requirements:
+User Input:
 {json.dumps(user_input, indent=2)}
 
-Return ONLY valid JSON in this format:
-
+Return ONLY a valid JSON object with this exact structure (no additional text):
 {{
-  "changes": [
-    {{
-      "item": "",
-      "reason": "",
-      "estimated_cost": 0
-    }}
-  ]
+    "changes": [
+        {{
+            "item": "item name",
+            "action": "description of change",
+            "estimated_cost": 100
+        }}
+    ]
 }}
-"""
 
-        output = self.llm(
-            prompt,
-            max_tokens=600,
-            temperature=0.7,
-            stop=["</s>"]
-        )
+JSON:"""
 
-        text = output["choices"][0]["text"]
+        response = self.llm(prompt, max_tokens=512, stop=["\n\n", "User:", "Scene:"], temperature=0.7)
 
-        # Extract JSON safely
+        raw_text = response["choices"][0]["text"].strip()
+
         try:
-            json_start = text.find("{")
-            json_end = text.rfind("}") + 1
-            structured = json.loads(text[json_start:json_end])
-            return structured
-        except:
-            print("⚠ LLM JSON parse failed.")
-            return {"changes": []}
+            # Try to extract JSON if there's extra text
+            if "{" in raw_text and "}" in raw_text:
+                start = raw_text.find("{")
+                end = raw_text.rfind("}") + 1
+                json_text = raw_text[start:end]
+                structured = json.loads(json_text)
+            else:
+                raise ValueError("No JSON found")
+        except Exception as e:
+            print(f"⚠ LLM JSON parse failed: {e}")
+            print(f"Raw response: {raw_text[:200]}...")
+            structured = {"changes": []}
+
+        return structured, raw_text

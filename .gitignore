@@ -32,6 +32,8 @@ env.bak/
 venv.bak/
 yolo-env/
 
+outputs/
+
 # IDE
 .vscode/
 .idea/

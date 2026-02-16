@@ -45,47 +45,41 @@ INTERIOR_CLASSES = {
     "Bench": 41,
 }
 
-model = YOLO("yolov8m-oiv7.pt")
-furniture_ids = list(set(INTERIOR_CLASSES.values()))
+MODEL_PATH = "yolov8m-oiv7.pt"
 
-def run_detection(image_path="room.jpg"):
-    img = cv2.imread(image_path)
-    h, w, _ = img.shape
+model = YOLO(MODEL_PATH)
 
-    # Tile logic (optional; can skip if running final pass immediately)
-    tile_size = 768
-    overlap = 200
-    for y in range(0, h, tile_size - overlap):
-        for x in range(0, w, tile_size - overlap):
-            tile = img[y:y + tile_size, x:x + tile_size]
-            model.predict(tile, conf=0.25)
 
-    # Final prediction
+def run_detection(image_path, output_manager=None):
+
     results = model.predict(
         source=image_path,
         imgsz=1536,
         conf=0.25,
-        classes=furniture_ids,
         agnostic_nms=True,
         augment=True,
+        save=False
     )
 
-    # Build structured output
-    detected_objects = []
+    detections = []
+    annotated_img = None
+
     for r in results:
-        for box in r.boxes:
-            cls_id = int(box.cls)
+        boxes = r.boxes
+        annotated_img = r.plot()
+
+        for box in boxes:
+            cls_id = int(box.cls[0])
             label = model.names[cls_id]
-            conf = float(box.conf)
-            detected_objects.append({
+            conf = float(box.conf[0])
+
+            detections.append({
                 "type": label.lower(),
                 "confidence": round(conf, 2)
             })
 
-    annotated_img = results[0].plot()
-    return detected_objects, annotated_img
+    if output_manager:
+        output_manager.save_json("detection.json", detections)
+        output_manager.save_image("detection_annotated.jpg", annotated_img)
 
-if __name__ == "__main__":
-    detected_objects = run_detection("room.jpg")
-    print("Detected Objects:")
-    print(detected_objects)
+    return detections
