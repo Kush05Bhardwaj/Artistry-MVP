@@ -25,6 +25,7 @@ MANIFEST
 
 # Virtual Environment
 venv/
+.venv/
 env/
 ENV/
 env.bak/
@@ -64,8 +65,15 @@ htmlcov/
 *.pkl
 *.h5
 *.pb
+*.gguf
 checkpoints/
 models/weights/
+
+# LLM Models (llama-cpp-python)
+*.bin
+*.safetensors
+llama/
+Meta-Llama*/
 
 # Dataset and Training
 OIDv4_ToolKit/
@@ -74,6 +82,21 @@ data/
 *.csv
 *.json
 !requirements.txt
+
+# YOLO detection outputs
+runs/
+detect/
+segment/
+classify/
+pose/
+
+# Image files (except sample/test images if needed)
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+!room.jpg
 
 # OS
 Thumbs.db
