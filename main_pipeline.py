@@ -2,13 +2,15 @@
 
 import json
 
+import cv2
+
 from detect import run_detection
 from segment import Segmenter
 from scene_builder import build_scene_data
 from llm_engine import LLMEngine
 from budget_engine import calculate_total_cost, evaluate_budget
 from output_manager import OutputManager
-from renderer import Renderer
+from renderer import RendererV2
 
 IMAGE_PATH = "room.jpg"
 LLM_MODEL_PATH = r"F:\llama\models\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
@@ -73,10 +75,18 @@ def run_pipeline():
 
     print("Rendering design...")
 
-    renderer = Renderer(seg_map, segmenter.model.config.id2label, output_manager=output)
-    final_image = renderer.render(IMAGE_PATH, structured_plan)
+    renderer = RendererV2()
 
-    output.save_image("rendered_v1.jpg", final_image)
+    rendered_image = renderer.render(
+        image=input_image,
+        segmentation_masks={
+            "wall": wall_mask,
+            "curtain": curtain_mask
+        },
+        plan=structured_plan
+    )
+
+    cv2.imwrite("outputs/rendered_v2.jpg", rendered_image)
 
     # Save comprehensive pipeline summary
     pipeline_summary = {
