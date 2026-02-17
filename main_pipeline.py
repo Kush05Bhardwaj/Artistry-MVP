@@ -77,6 +77,10 @@ def run_pipeline():
 
     renderer = RendererV2()
 
+    input_image = cv2.imread(IMAGE_PATH)
+    wall_mask = (seg_map == 0).astype('uint8') * 255  # Assuming wall is region 0
+    curtain_mask = (seg_map == 1).astype('uint8') * 255  # Assuming curtain is region 1
+
     rendered_image = renderer.render(
         image=input_image,
         segmentation_masks={
