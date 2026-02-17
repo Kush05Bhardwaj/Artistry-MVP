@@ -1,6 +1,7 @@
 # detect.py
 from ultralytics import YOLO
 import cv2
+import numpy as np
 
 INTERIOR_CLASSES = {
     "Bed": 34,
@@ -46,11 +47,13 @@ INTERIOR_CLASSES = {
 }
 
 MODEL_PATH = "yolov8m-oiv7.pt"
-
 model = YOLO(MODEL_PATH)
 
 
 def run_detection(image_path, output_manager=None):
+
+    image = cv2.imread(image_path)
+    h, w = image.shape[:2]
 
     results = model.predict(
         source=image_path,
@@ -65,18 +68,33 @@ def run_detection(image_path, output_manager=None):
     annotated_img = None
 
     for r in results:
-        boxes = r.boxes
+
         annotated_img = r.plot()
 
-        for box in boxes:
+        for box in r.boxes:
+
             cls_id = int(box.cls[0])
             label = model.names[cls_id]
             conf = float(box.conf[0])
 
+            # 🔥 Extract bounding box
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+
+            # Clamp to image bounds (important for safety)
+            x1 = max(0, int(x1))
+            y1 = max(0, int(y1))
+            x2 = min(w, int(x2))
+            y2 = min(h, int(y2))
+
             detections.append({
                 "type": label.lower(),
-                "confidence": round(conf, 2)
+                "confidence": round(conf, 2),
+                "box": [x1, y1, x2, y2],
+                "area": int((x2 - x1) * (y2 - y1))
             })
+
+    # Optional: filter tiny false detections
+    detections = [d for d in detections if d["area"] > 1000]
 
     if output_manager:
         output_manager.save_json("detection.json", detections)
