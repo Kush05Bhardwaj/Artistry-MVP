@@ -8,6 +8,7 @@ from scene_builder import build_scene_data
 from llm_engine import LLMEngine
 from budget_engine import calculate_total_cost, evaluate_budget
 from output_manager import OutputManager
+from renderer import Renderer
 
 IMAGE_PATH = "room.jpg"
 LLM_MODEL_PATH = r"F:\llama\models\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
@@ -66,6 +67,13 @@ def run_pipeline():
     }
 
     output.save_json("budget_result.json", budget_data)
+
+    print("Rendering design...")
+
+    renderer = Renderer(seg_map, segmenter.model.config.id2label)
+    final_image = renderer.render(IMAGE_PATH, structured_plan)
+
+    output.save_image("rendered_v1.jpg", final_image)
 
     print("Pipeline complete. Outputs saved.")
 

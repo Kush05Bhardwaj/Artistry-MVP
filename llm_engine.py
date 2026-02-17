@@ -1,6 +1,7 @@
 # llm_engine.py
 
 import json
+import re
 from llama_cpp import Llama
 
 
@@ -15,43 +16,88 @@ class LLMEngine:
         )
 
     def generate_design(self, scene_data, user_input):
-        prompt = f"""You are an interior design AI assistant. Based on the scene data and user input, generate design suggestions.
+        """Generate design suggestions based on scene data and user input.
+        
+        Args:
+            scene_data: Dictionary with scene information
+            user_input: Dictionary with style, budget, priority, constraints
+            
+        Returns:
+            tuple: (structured_plan, raw_response)
+        """
+        
+        system_prompt = """
+You are an interior design planning engine.
 
+You MUST respond ONLY in valid JSON.
+
+Output format:
+
+{
+  "changes": [
+    {
+      "action": "brighten_room",
+      "intensity": 0.2
+    },
+    {
+      "action": "warm_lighting",
+      "temperature_shift": 15
+    },
+    {
+      "action": "recolor_wall",
+      "color": "warm white"
+    }
+  ]
+}
+
+Allowed actions:
+- brighten_room
+- warm_lighting
+- recolor_wall
+- recolor_curtain
+
+DO NOT explain.
+DO NOT add text.
+ONLY JSON.
+"""
+
+        user_message = f"""
 Scene Data:
 {json.dumps(scene_data, indent=2)}
 
 User Input:
 {json.dumps(user_input, indent=2)}
+"""
 
-Return ONLY a valid JSON object with this exact structure (no additional text):
-{{
-    "changes": [
-        {{
-            "item": "item name",
-            "action": "description of change",
-            "estimated_cost": 100
-        }}
-    ]
-}}
+        response = self.llm.create_chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.4
+        )
 
-JSON:"""
+        raw_text = response["choices"][0]["message"]["content"]
 
-        response = self.llm(prompt, max_tokens=512, stop=["\n\n", "User:", "Scene:"], temperature=0.7)
+        # Save raw for debugging
+        with open("outputs/llm_raw.txt", "w", encoding="utf-8") as f:
+            f.write(raw_text)
 
-        raw_text = response["choices"][0]["text"].strip()
+        structured = self._extract_json(raw_text)
 
-        try:
-            # Try to extract JSON if there's extra text
-            if "{" in raw_text and "}" in raw_text:
-                start = raw_text.find("{")
-                end = raw_text.rfind("}") + 1
-                json_text = raw_text[start:end]
-                structured = json.loads(json_text)
-            else:
-                raise ValueError("No JSON found")
-        except Exception as e:
-            print(f"⚠ LLM JSON parse failed: {e}")
-            print(f"Raw response: {raw_text[:200]}...")
-            structured = {"changes": []}
+        # Save parsed output
+        with open("outputs/structured_plan.json", "w", encoding="utf-8") as f:
+            json.dump(structured, f, indent=4)
 
         return structured, raw_text
+
+    def _extract_json(self, text):
+        try:
+            json_match = re.search(r"\{.*\}", text, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group())
+        except:
+            pass
+
+        print("⚠ LLM JSON parse failed. Returning empty plan.")
+        return {"changes": []}
