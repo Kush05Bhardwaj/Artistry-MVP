@@ -27,6 +27,9 @@ def run_pipeline():
     seg_map = segmenter.segment(IMAGE_PATH)
     region_stats = segmenter.extract_region_stats(seg_map)
 
+    # Save raw segmentation numpy array for exact reproduction
+    output.save_numpy("segmentation_raw.npy", seg_map)
+
     overlay = segmenter.create_overlay(IMAGE_PATH, seg_map)
 
     output.save_json("segmentation_stats.json", region_stats)
@@ -70,10 +73,22 @@ def run_pipeline():
 
     print("Rendering design...")
 
-    renderer = Renderer(seg_map, segmenter.model.config.id2label)
+    renderer = Renderer(seg_map, segmenter.model.config.id2label, output_manager=output)
     final_image = renderer.render(IMAGE_PATH, structured_plan)
 
     output.save_image("rendered_v1.jpg", final_image)
+
+    # Save comprehensive pipeline summary
+    pipeline_summary = {
+        "image_path": IMAGE_PATH,
+        "detected_objects_count": len(detected_objects),
+        "scene_data": scene_data,
+        "user_input": user_input,
+        "budget_result": budget_data,
+        "llm_model": LLM_MODEL_PATH,
+        "renderer_version": "v2"
+    }
+    output.save_pipeline_summary(pipeline_summary)
 
     print("Pipeline complete. Outputs saved.")
 

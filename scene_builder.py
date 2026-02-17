@@ -29,6 +29,7 @@ def build_scene_data(image_path, detected_objects, region_stats):
         "object_counts": dict(object_counts),
         "regions": region_stats,
         "brightness_score": brightness_score,
+        "avg_brightness": brightness_score,  # Alias for fallback compatibility
         "clutter_score": clutter_score,
     }
 
