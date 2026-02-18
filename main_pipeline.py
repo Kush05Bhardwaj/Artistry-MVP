@@ -15,8 +15,8 @@ from budget_engine import calculate_total_cost, evaluate_budget
 from output_manager import OutputManager
 
 from renderer import RendererV2
-# from sam_engine import SAMEngine
-# from diffusion_renderer import DiffusionRenderer
+from diffusion_renderer import DiffusionRenderer
+from sam_engine import SAMEngine
 
 
 IMAGE_PATH = "room.jpg"
@@ -130,49 +130,102 @@ def run_pipeline():
 
     output.save_json("budget_result.json", budget_data)
 
-    # Apply traditional rendering (fast, reliable)
-    print("🎨 Applying design changes with Renderer v2...")
+    # AI-POWERED REDESIGN using Stable Diffusion + LLM suggestions
+    print("\n🤖 Loading AI models for intelligent redesign...")
     
-    renderer = RendererV2()
+    sam_engine = SAMEngine()
+    diff_renderer = DiffusionRenderer()
+    
     image = cv2.imread(IMAGE_PATH)
+    final_image = image.copy()
     
-    # Create mask dictionary from segmentation map
-    segmentation_masks = {}
+    print(f"\n🎨 Applying {len(structured_plan['changes'])} AI-powered changes...")
     
-    # Get label mapping from segmenter
-    label_to_id = {v.strip(): k for k, v in segmenter.labels.items()}
+    # Process each LLM suggestion with AI inpainting
+    for i, change in enumerate(structured_plan["changes"], 1):
+        action = change.get("action")
+        
+        print(f"\n[{i}/{len(structured_plan['changes'])}] Processing: {action}")
+        
+        # AI Inpainting for replace_curtain
+        if action == "replace_curtain":
+            curtain_desc = change.get("new_curtain", "elegant white linen curtain")
+            
+            # Find curtain objects from YOLO detection
+            curtain_objects = [obj for obj in detected_objects if obj["type"] == "curtain"]
+            
+            if curtain_objects:
+                for j, obj in enumerate(curtain_objects, 1):
+                    box = obj["box"]
+                    print(f"  🪟 Curtain {j}: Generating precise mask with SAM...")
+                    
+                    mask = sam_engine.get_mask_from_box(final_image, box)
+                    
+                    # Build AI prompt from LLM suggestion
+                    prompt = f"{curtain_desc}, soft fabric folds, natural lighting, interior design photography, high quality"
+                    
+                    print(f"  🎨 AI Inpainting: '{prompt}'")
+                    print(f"     (This may take 2-5 minutes on CPU...)")
+                    
+                    final_image = diff_renderer.inpaint(
+                        final_image,
+                        mask,
+                        prompt
+                    )
+                    print(f"  ✅ Curtain {j} redesigned!")
+            else:
+                print(f"  ⚠️  No curtain objects detected, skipping")
+        
+        # AI Inpainting for recolor_wall
+        elif action == "recolor_wall":
+            wall_color = change.get("color", "soft white")
+            
+            # Get wall mask from segmentation
+            label_to_id = {v.strip(): k for k, v in segmenter.labels.items()}
+            if "wall" in label_to_id:
+                wall_id = label_to_id["wall"]
+                wall_mask = (seg_map == wall_id).astype(np.float32)
+                
+                print(f"  🏠 Wall recoloring: {wall_color}")
+                
+                # Build AI prompt for wall color
+                if wall_color.startswith("#"):
+                    prompt = f"interior wall painted in elegant soft pastel color, smooth finish, professional interior design, even lighting"
+                else:
+                    prompt = f"interior wall painted in {wall_color} color, smooth finish, professional interior design, even lighting"
+                
+                print(f"  🎨 AI Inpainting: '{prompt}'")
+                print(f"     (This may take 2-5 minutes on CPU...)")
+                
+                final_image = diff_renderer.inpaint(
+                    final_image,
+                    wall_mask,
+                    prompt
+                )
+                print(f"  ✅ Walls redesigned!")
+            else:
+                print(f"  ⚠️  No wall segmentation found, skipping")
+        
+        # Traditional rendering for lighting effects
+        elif action in ["brighten_room", "warm_lighting"]:
+            print(f"  💡 {action} - applied as post-processing")
     
-    print(f"  Available labels: {', '.join(sorted(label_to_id.keys())[:20])}...")
+    # Apply lighting effects as final touch
+    print(f"\n✨ Applying lighting enhancements...")
+    from renderer import RendererV2
+    renderer = RendererV2()
     
-    # Extract individual masks
-    if "wall" in label_to_id:
-        wall_id = label_to_id["wall"]
-        segmentation_masks["wall"] = (seg_map == wall_id).astype(np.uint8)
-        wall_pixels = segmentation_masks["wall"].sum()
-        print(f"  ✓ Wall mask created ({wall_pixels:,} pixels)")
-    else:
-        print(f"  ⚠️  No 'wall' label found")
+    lighting_plan = {
+        "changes": [c for c in structured_plan["changes"] 
+                   if c["action"] in ["brighten_room", "warm_lighting"]]
+    }
     
-    if "curtain" in label_to_id:
-        curtain_id = label_to_id["curtain"]
-        segmentation_masks["curtain"] = (seg_map == curtain_id).astype(np.uint8)
-        curtain_pixels = segmentation_masks["curtain"].sum()
-        print(f"  ✓ Curtain mask created ({curtain_pixels:,} pixels)")
-    else:
-        print(f"  ⚠️  No 'curtain' label found")
+    if lighting_plan["changes"]:
+        final_image = renderer.render(final_image, {}, lighting_plan)
     
-    # Apply rendering with LLM plan
-    rendered_image = renderer.render(
-        image=image,
-        segmentation_masks=segmentation_masks,
-        plan=structured_plan
-    )
-    
-    # Save rendered result to run folder
-    output.save_image("rendered_design.jpg", rendered_image)
-    
-    # Also save to outputs root for easy access
-    cv2.imwrite("outputs/rendered_v2.jpg", rendered_image)
+    # Save AI-redesigned result
+    output.save_image("ai_redesign.jpg", final_image)
+    cv2.imwrite("outputs/rendered_v2.jpg", final_image)
 
     # Save full pipeline summary
     pipeline_summary = {
@@ -182,14 +235,15 @@ def run_pipeline():
         "user_input": user_input,
         "budget_result": budget_data,
         "llm_model": LLM_MODEL_PATH,
-        "renderer": "Traditional Renderer v2 (OpenCV + Advanced CV)"
+        "renderer": "SAM + Stable Diffusion AI Inpainting (LLM-guided)"
     }
 
     output.save_pipeline_summary(pipeline_summary)
 
-    print("\n✅ Pipeline complete!")
+    print("\n✅ AI-powered redesign complete!")
     print(f"📁 All outputs saved to: {output.run_dir}")
-    print(f"🎨 Rendered image: outputs/rendered_v2.jpg")
+    print(f"🤖 AI redesigned image: outputs/rendered_v2.jpg")
+    print(f"\n⏱️  Note: CPU-based AI inpainting is slow but produces photorealistic results!")
 
 
 if __name__ == "__main__":
