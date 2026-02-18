@@ -258,7 +258,7 @@ CRITICAL: Output JSON only. Nothing else."""
             cost = 5000
             changes.append({
                 "action": "recolor_wall",
-                "color": "warm white",
+                "color": "#E8F4F8",  # Light blue-gray for dramatic change from yellow
                 "estimated_cost": cost
             })
             remaining_budget -= cost

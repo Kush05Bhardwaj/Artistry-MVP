@@ -7,10 +7,18 @@ from PIL import Image
 class DiffusionRenderer:
 
     def __init__(self):
+        # Auto-detect device (CUDA if available, else CPU)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        dtype = torch.float16 if self.device == "cuda" else torch.float32
+        
+        print(f"🖼️  Loading Diffusion Renderer on {self.device.upper()}...")
+        
         self.pipe = StableDiffusionInpaintPipeline.from_pretrained(
             "runwayml/stable-diffusion-inpainting",
-            torch_dtype=torch.float16
-        ).to("cuda")
+            torch_dtype=dtype
+        ).to(self.device)
+        
+        print(f"✅ Diffusion Renderer ready on {self.device.upper()}")
 
     def inpaint(self, image, mask, prompt):
         image_pil = Image.fromarray(image)
